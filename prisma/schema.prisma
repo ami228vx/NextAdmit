@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  password  String
+  role      String     @default("student") // student, admin, educator
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  student   Student?
+  roadmaps  Roadmap[]
+  aiLogs    AILog[]
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  grade     Int      // 9-12
+  country   String
+  interests String[] // STEM, humanities, arts, etc.
+  gpa       Float?
+  satScore  Int?
+  ieltsBand Float?
+  
+  targetUniversities University[]
+  roadmaps           Roadmap[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model University {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  website   String
+  country   String
+  
+  satRangeMin        Int?
+  satRangeMax        Int?
+  gpaRequirement     Float?
+  acceptanceRate     Float? // 0-100
+  
+  earlyDecisionDeadline DateTime?
+  regularDecisionDeadline DateTime?
+  
+  meetsFullNeed      Boolean @default(false)
+  needBlind          Boolean @default(false)
+  internationalAid   Boolean @default(false)
+  averageAidPackage  Float?
+  
+  programs           String[] // Programs offered
+  
+  studentTargets     Student[]
+  roadmapItems       RoadmapItem[]
+  
+  lastUpdatedAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+}
+
+model Roadmap {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  content   String   @db.Text // Full roadmap content
+  
+  items     RoadmapItem[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model RoadmapItem {
+  id        String   @id @default(cuid())
+  roadmapId String
+  roadmap   Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  
+  universityId String
+  university   University @relation(fields: [universityId], references: [id])
+  
+  phase     String   // "exam-prep", "extracurricular", "application"
+  task      String
+  deadline  DateTime?
+  priority  String   @default("medium") // low, medium, high
+  completed Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model AILog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  question  String   @db.Text
+  answer    String   @db.Text
+  sources   String[] // URLs of sources
+  
+  userRating Int?    // 1-5 star rating
+  flagged    Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+}
+
+model UniversityData {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  source    String   // URL of data source
+  
+  data      Json     // Full university data as JSON
+  
+  lastUpdatedAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+}
